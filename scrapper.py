@@ -1,5 +1,6 @@
 import argparse
 import csv
+import json
 import re
 import time
 
@@ -83,6 +84,206 @@ def download_stocks(driver, wait):
 
     print("Stocks data downloaded successfully.")
 
+def parse_brazilian_number(value: str) -> float:
+    """
+    Converts strings like:
+        14.777.474,04 -> 14777474.04
+        2.890,65      -> 2890.65
+    """
+    if not value:
+        return 0.0
+
+    return float(
+        value.strip()
+             .replace(".", "")
+             .replace(",", ".")
+    )
+
+def filter_stocks(offset):
+    print("Filtering stocks data...")
+
+    csv_file = Path(__file__).parent / "statusinvest-busca-avancada.csv"
+
+    stocks = []
+
+    with open(csv_file, encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f, delimiter=";")
+
+        for row in reader:
+            row = {k.strip(): v for k, v in row.items()}
+
+            liquidity = parse_brazilian_number(
+                row["LIQUIDEZ MEDIA DIARIA"]
+            )
+
+            if liquidity >= offset:
+                stocks.append(row["TICKER"])
+
+    print("Stocks data filtered successfully.")
+
+    return stocks
+
+def get_statusinvest_metrics(driver, symbol):
+    url = f"https://statusinvest.com.br/acoes/{symbol.lower()}"
+    driver.get(url)
+
+    sector_div = driver.find_element(By.CSS_SELECTOR, "div.info.pr-md-2:not(.pl-md-2)")
+    sector = sector_div.find_element(By.TAG_NAME, "strong").text
+
+    sector_sub_div = driver.find_element(By.CSS_SELECTOR, "div.info.pl-md-2.pr-md-2")
+    sector_sub = sector_sub_div.find_element(By.TAG_NAME, "strong").text
+
+    segment_div = driver.find_element(By.CSS_SELECTOR, "div.info.pl-md-2:not(.pr-md-2)")
+    segment = segment_div.find_element(By.TAG_NAME, "strong").text
+
+    dy = driver.find_element(By.XPATH, "//h3[normalize-space(text())='D.Y']/parent::a/following-sibling::div//strong").text
+    pl = driver.find_element(By.XPATH, "//h3[normalize-space(text())='P/L']/parent::a/following-sibling::div//strong").text
+    pv = driver.find_element(By.XPATH, "//h3[normalize-space(text())='P/VP']/parent::a/following-sibling::div//strong").text
+    roe = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROE']/parent::a/following-sibling::div//strong").text
+    roa = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROA']/parent::a/following-sibling::div//strong").text
+    roic = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROIC']/parent::a/following-sibling::div//strong").text
+    eps = driver.find_element(By.XPATH, "//h3[normalize-space(text())='VPA']/parent::a/following-sibling::div//strong").text
+    bvps = driver.find_element(By.XPATH, "//h3[normalize-space(text())='LPA']/parent::a/following-sibling::div//strong").text
+    ev_ebit = driver.find_element(By.XPATH, "//h3[normalize-space(text())='EV/EBIT']/parent::a/following-sibling::div//strong").text
+    cagr = driver.find_element(By.XPATH,"//h3[normalize-space()='CAGR Lucros 5 anos']/following-sibling::div//strong").text
+
+    return {
+        "sector": sector,
+        "sector_sub": sector_sub,
+        "segment": segment,
+        "dy": dy,
+        "pl": pl,
+        "pv": pv,
+        "roe": roe,
+        "roa": roa,
+        "roic": roic,
+        "eps": eps,
+        "bvps": bvps,
+        "ev_ebit": ev_ebit,
+        "cagr": cagr,
+    }
+
+def get_stock_metrics(driver, symbol, service):
+    if service == "statusinvest":
+        return get_statusinvest_metrics(driver, symbol)
+    
+    raise ValueError(f"Unknown service: {service}")
+
+def save_stock_metrics(ticker: str, metrics: dict):
+    file = Path("stocks.json")
+
+    if file.exists():
+        with file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        data = {}
+
+    data[ticker] = metrics
+
+    with file.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def get_reits(driver):
+    driver.get("https://fiis.com.br/lista-de-fundos-imobiliarios/")
+
+    cookies_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "hs-eu-cookie-confirmation-button-group")))
+    cookies_button.click()
+
+    time.sleep(1)
+
+    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.tickerBox")))
+
+    containers = driver.find_elements(By.CSS_SELECTOR, "div.tickerBox")
+
+    results = {}
+
+    for box in containers:
+        try:
+            symbol = box.find_element(By.CSS_SELECTOR, "div.tickerBox__title").text.strip()
+            if not symbol:
+                continue
+
+            type_text = box.find_element(By.CSS_SELECTOR, "span.tickerBox__type").text.strip()
+
+            parts = type_text.split(":")
+            sector = parts[0].strip().title()
+            sector_sub = parts[1].strip().title() if len(parts) > 1 else ""
+
+            info_values = box.find_elements(By.CSS_SELECTOR, ".tickerBox__info__box")
+            if len(info_values) >= 2:
+                dy_text = info_values[0].text.strip()
+                company_assets = info_values[1].text.strip()
+                if dy_text == "-" or company_assets == "-":
+                    continue
+            else:
+                continue
+
+            results[symbol] = {
+                "sector": sector,
+                "sector_sub": sector_sub
+            }
+        except Exception as e:
+            continue
+
+    return results
+
+def parse_fundsexplorer_number(value):
+    value = value.upper().strip()
+
+    multiplier = 1
+    if "K" in value:
+        multiplier = 1_000
+    elif "M" in value:
+        multiplier = 1_000_000
+
+    numeric = re.sub(r'[^\d,\.]', '', value)
+    numeric = float(numeric.replace('.', '').replace(',', '.'))
+
+    return numeric * multiplier
+
+def get_fundsexplorer_data(driver, symbol, offset):
+    driver.get(f"https://www.fundsexplorer.com.br/funds/{symbol}")
+
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".indicators__box")))
+
+    dy = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='Dividend Yield']]//p[2]/b").text.strip()
+    pv = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='P/VP']]//p[2]/b").text.strip()
+
+    avg_liquid = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='Liquidez Média Diária']]//p[2]/b").text.strip()
+
+    try:
+        liquidity = parse_fundsexplorer_number(avg_liquid)
+        if liquidity < offset:
+            return
+    except ValueError:
+        return
+
+    return {
+        "dy": dy,
+        "pv": pv,
+        "liquidity": liquidity
+    }
+
+def get_reit_metrics(driver, symbol, service, offset):
+    if service == "fundsexplorer":
+        return get_fundsexplorer_data(driver, symbol, offset)
+
+    raise ValueError(f"Unknown service: {service}")
+
+def save_reit_metrics(ticker: str, metrics: dict):
+    file = Path("reits.json")
+
+    if file.exists():
+        with file.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        data = {}
+
+    data[ticker] = metrics
+
+    with file.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Scrappe assets data."
@@ -151,5 +352,15 @@ if __name__ == "__main__":
 
     if args.stocks:
         download_stocks(driver, wait)
+        
+        for ticker in filter_stocks(args.stocks_offset):
+            metrics = get_stock_metrics(driver, ticker, args.stocks_service)
+            save_stock_metrics(ticker, metrics)
+
+    if args.reits:
+        for ticker, data in get_reits(driver).items():
+            metrics = get_reit_metrics(driver, ticker, args.reits_service, args.reits_offset)
+            if metrics is not None:
+                save_reit_metrics(ticker, {**data, **metrics})
 
     driver.quit()

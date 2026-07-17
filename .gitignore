@@ -1,4 +1,3 @@
-```gitignore
 # Python
 __pycache__/
 *.py[cod]
@@ -45,4 +44,4 @@ Thumbs.db
 
 # Downloaded files
 statusinvest-busca-avancada.csv
-```
+stocks.json
