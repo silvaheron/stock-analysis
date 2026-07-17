@@ -231,10 +231,10 @@ def get_stock_metrics(driver, symbol, service):
         else:
             raise ValueError(f"Unknown service: {service}")
 
-        print(f"Successfully scraped {symbol}.")
+        print(f"Successfully processed {symbol}.")
         return metrics
     except Exception:
-        print(f"Failed to scrape {symbol}.")
+        print(f"Failed to process {symbol}.")
         raise
 
 def save_metrics(ticker: str, metrics: dict, asset_type: str):
@@ -280,6 +280,8 @@ def get_reits(driver):
             if not symbol:
                 continue
 
+            print(f"Reading {symbol}...")
+
             type_text = box.find_element(
                 By.CSS_SELECTOR,
                 "span.tickerBox__type"
@@ -302,7 +304,6 @@ def get_reits(driver):
                 continue
 
             results[symbol] = {"sector": sector, "sector_sub": sector_sub}
-            print(f"Found REIT {symbol}.")
         except Exception:
             print("Failed to parse a REIT entry; skipping.")
             continue
@@ -374,7 +375,7 @@ def get_fundsexplorer_data(driver, ticker, offset):
         print(f"Failed to parse liquidity for {ticker}; skipping.")
         return
 
-    print(f"Successfully scraped {ticker} (liquidity={liquidity}).")
+    print(f"Successfully processed {ticker}.")
 
     return {"dy": dy, "pv": pv, "liquidity": liquidity}
 
@@ -393,7 +394,7 @@ def get_reit_metrics(driver, ticker, service, offset):
 
         return metrics
     except Exception:
-        print(f"Failed to scrape {ticker}.")
+        print(f"Failed to process {ticker}.")
         raise
 
 if __name__ == "__main__":
