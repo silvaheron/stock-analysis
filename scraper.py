@@ -1,18 +1,21 @@
 import argparse
 import csv
 import json
+import random
 import re
 import time
-
 from pathlib import Path
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    NoSuchElementException,
+    TimeoutException,
+)
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -71,40 +74,39 @@ def download_assets(driver, wait, asset_type):
 
     # Close footer (if it appears)
     try:
-        close_footer = WebDriverWait(driver, 3).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "#footer-fixed > a"))
+        close_footer = WebDriverWait(
+            driver,
+            3,
+        ).until(
+            EC.element_to_be_clickable(
+                (By.CSS_SELECTOR, "#footer-fixed > a")
+            )
         )
         close_footer.click()
     except TimeoutException:
         pass
 
     # Close advertising (if it appears)
-    close_button = wait.until(
-        EC.element_to_be_clickable(
-            (By.CSS_SELECTOR, ".btn-close")
+    try:
+        close_button = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, ".btn-close"))
         )
-    )
-    close_button.click()
+        close_button.click()
+    except TimeoutException:
+        pass
 
     # Click "Buscar"
     search_button = wait.until(
-        EC.element_to_be_clickable(
-            (By.CSS_SELECTOR, "button.find.btn-main")
-        )
+        EC.element_to_be_clickable((By.CSS_SELECTOR, "button.find.btn-main"))
     )
     search_button.click()
 
     # Click "Download"
     download_button = wait.until(
-        EC.presence_of_element_located(
-            (By.CSS_SELECTOR, "a.btn-download")
-        )
+        EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn-download"))
     )
 
-    driver.execute_script(
-        "arguments[0].click();",
-        download_button
-    )
+    driver.execute_script("arguments[0].click();", download_button)
 
     rename_download(f"{asset_type.lower()}.csv")
 
@@ -119,11 +121,7 @@ def parse_brazilian_number(value: str) -> float:
     if not value:
         return 0.0
 
-    return float(
-        value.strip()
-             .replace(".", "")
-             .replace(",", ".")
-    )
+    return float(value.strip().replace(".", "").replace(",", "."))
 
 def filter_assets(offset, asset_type):
     print(f"Filtering {asset_type} data...")
@@ -138,9 +136,7 @@ def filter_assets(offset, asset_type):
         for row in reader:
             row = {k.strip(): v for k, v in row.items()}
 
-            liquidity = parse_brazilian_number(
-                row["LIQUIDEZ MEDIA DIARIA"]
-            )
+            liquidity = parse_brazilian_number(row["LIQUIDEZ MEDIA DIARIA"])
 
             if liquidity >= offset:
                 assets.append(row["TICKER"])
@@ -153,26 +149,62 @@ def get_statusinvest_metrics(driver, symbol):
     url = f"https://statusinvest.com.br/acoes/{symbol.lower()}"
     driver.get(url)
 
-    sector_div = driver.find_element(By.CSS_SELECTOR, "div.info.pr-md-2:not(.pl-md-2)")
+    sector_div = driver.find_element(
+        By.CSS_SELECTOR, "div.info.pr-md-2:not(.pl-md-2)"
+    )
     sector = sector_div.find_element(By.TAG_NAME, "strong").text
 
-    sector_sub_div = driver.find_element(By.CSS_SELECTOR, "div.info.pl-md-2.pr-md-2")
+    sector_sub_div = driver.find_element(
+        By.CSS_SELECTOR, "div.info.pl-md-2.pr-md-2"
+    )
     sector_sub = sector_sub_div.find_element(By.TAG_NAME, "strong").text
 
-    segment_div = driver.find_element(By.CSS_SELECTOR, "div.info.pl-md-2:not(.pr-md-2)")
+    segment_div = driver.find_element(
+        By.CSS_SELECTOR, "div.info.pl-md-2:not(.pr-md-2)"
+    )
     segment = segment_div.find_element(By.TAG_NAME, "strong").text
 
-    dy = driver.find_element(By.XPATH, "//h3[normalize-space(text())='D.Y']/parent::a/following-sibling::div//strong").text
-    pl = driver.find_element(By.XPATH, "//h3[normalize-space(text())='P/L']/parent::a/following-sibling::div//strong").text
-    pv = driver.find_element(By.XPATH, "//h3[normalize-space(text())='P/VP']/parent::a/following-sibling::div//strong").text
-    roe = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROE']/parent::a/following-sibling::div//strong").text
-    roa = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROA']/parent::a/following-sibling::div//strong").text
-    roic = driver.find_element(By.XPATH, "//h3[normalize-space(text())='ROIC']/parent::a/following-sibling::div//strong").text
-    eps = driver.find_element(By.XPATH, "//h3[normalize-space(text())='VPA']/parent::a/following-sibling::div//strong").text
-    bvps = driver.find_element(By.XPATH, "//h3[normalize-space(text())='LPA']/parent::a/following-sibling::div//strong").text
-    ev_ebit = driver.find_element(By.XPATH, "//h3[normalize-space(text())='EV/EBIT']/parent::a/following-sibling::div//strong").text
-    cagr = driver.find_element(By.XPATH,"//h3[normalize-space()='CAGR Lucros 5 anos']/following-sibling::div//strong").text
-
+    dy = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='D.Y']/parent::a/following-sibling::div//strong",
+    ).text
+    pl = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='P/L']/parent::a/following-sibling::div//strong",
+    ).text
+    pv = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='P/VP']/parent::a/following-sibling::div//strong",
+    ).text
+    roe = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='ROE']/parent::a/following-sibling::div//strong",
+    ).text
+    roa = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='ROA']/parent::a/following-sibling::div//strong",
+    ).text
+    roic = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='ROIC']/parent::a/following-sibling::div//strong",
+    ).text
+    eps = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='VPA']/parent::a/following-sibling::div//strong",
+    ).text
+    bvps = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='LPA']/parent::a/following-sibling::div//strong",
+    ).text
+    ev_ebit = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space(text())='EV/EBIT']/parent::a/following-sibling::div//strong",
+    ).text
+    cagr = driver.find_element(
+        By.XPATH,
+        "//h3[normalize-space()='CAGR Lucros 5 anos']/following-sibling::div//strong",
+    ).text
+    
     return {
         "sector": sector,
         "sector_sub": sector_sub,
@@ -190,10 +222,20 @@ def get_statusinvest_metrics(driver, symbol):
     }
 
 def get_stock_metrics(driver, symbol, service):
-    if service == "statusinvest":
-        return get_statusinvest_metrics(driver, symbol)
-    
-    raise ValueError(f"Unknown service: {service}")
+    time.sleep(random.uniform(1, 3))
+
+    print(f"Processing {symbol} (service={service})...")
+    try:
+        if service == "statusinvest":
+            metrics = get_statusinvest_metrics(driver, symbol)
+        else:
+            raise ValueError(f"Unknown service: {service}")
+
+        print(f"Successfully scraped {symbol}.")
+        return metrics
+    except Exception:
+        print(f"Failed to scrape {symbol}.")
+        raise
 
 def save_metrics(ticker: str, metrics: dict, asset_type: str):
     file = Path(f"{asset_type}.json")
@@ -212,12 +254,19 @@ def save_metrics(ticker: str, metrics: dict, asset_type: str):
 def get_reits(driver):
     driver.get("https://fiis.com.br/lista-de-fundos-imobiliarios/")
 
-    cookies_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "hs-eu-cookie-confirmation-button-group")))
+    cookies_button = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((
+            By.ID,
+            "hs-eu-cookie-confirmation-button-group"
+        ))
+    )
     cookies_button.click()
 
     time.sleep(1)
 
-    wait.until(EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.tickerBox")))
+    wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.tickerBox"))
+    )
 
     containers = driver.find_elements(By.CSS_SELECTOR, "div.tickerBox")
 
@@ -225,17 +274,25 @@ def get_reits(driver):
 
     for box in containers:
         try:
-            symbol = box.find_element(By.CSS_SELECTOR, "div.tickerBox__title").text.strip()
+            symbol = box.find_element(
+                By.CSS_SELECTOR, "div.tickerBox__title"
+            ).text.strip()
             if not symbol:
                 continue
 
-            type_text = box.find_element(By.CSS_SELECTOR, "span.tickerBox__type").text.strip()
+            type_text = box.find_element(
+                By.CSS_SELECTOR,
+                "span.tickerBox__type"
+            ).text.strip()
 
             parts = type_text.split(":")
             sector = parts[0].strip().title()
             sector_sub = parts[1].strip().title() if len(parts) > 1 else ""
 
-            info_values = box.find_elements(By.CSS_SELECTOR, ".tickerBox__info__box")
+            info_values = box.find_elements(
+                By.CSS_SELECTOR,
+                ".tickerBox__info__box"
+            )
             if len(info_values) >= 2:
                 dy_text = info_values[0].text.strip()
                 company_assets = info_values[1].text.strip()
@@ -244,16 +301,18 @@ def get_reits(driver):
             else:
                 continue
 
-            results[symbol] = {
-                "sector": sector,
-                "sector_sub": sector_sub
-            }
-        except Exception as e:
+            results[symbol] = {"sector": sector, "sector_sub": sector_sub}
+            print(f"Found REIT {symbol}.")
+        except Exception:
+            print("Failed to parse a REIT entry; skipping.")
             continue
 
     return results
 
 def parse_fundsexplorer_number(value):
+    if value is None:
+        return 0.0
+    
     value = value.upper().strip()
 
     multiplier = 1
@@ -262,39 +321,80 @@ def parse_fundsexplorer_number(value):
     elif "M" in value:
         multiplier = 1_000_000
 
-    numeric = re.sub(r'[^\d,\.]', '', value)
-    numeric = float(numeric.replace('.', '').replace(',', '.'))
+    numeric = re.sub(r"[^\d,\.]", "", value)
+    numeric = float(numeric.replace(".", "").replace(",", "."))
 
     return numeric * multiplier
 
-def get_fundsexplorer_data(driver, symbol, offset):
-    driver.get(f"https://www.fundsexplorer.com.br/funds/{symbol}")
+def get_fundsexplorer_data(driver, ticker, offset):
+    driver.get(f"https://www.fundsexplorer.com.br/funds/{ticker}")
 
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".indicators__box")))
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, ".indicators__box")
+            )
+        )
+    except TimeoutException:
+        print(f"Timeout while waiting for indicators to load for {ticker}.")
+        pass
 
-    dy = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='Dividend Yield']]//p[2]/b").text.strip()
-    pv = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='P/VP']]//p[2]/b").text.strip()
+    try:
+        dy = driver.find_element(
+            By.XPATH,
+            "//div[@class='indicators__box'][.//p[normalize-space(text())='Dividend Yield']]//p[2]/b",
+        ).text.strip()
+    except NoSuchElementException:
+        dy = None
 
-    avg_liquid = driver.find_element(By.XPATH, "//div[@class='indicators__box'][.//p[normalize-space(text())='Liquidez Média Diária']]//p[2]/b").text.strip()
+    try:
+        pv = driver.find_element(
+            By.XPATH,
+            "//div[@class='indicators__box'][.//p[normalize-space(text())='P/VP']]//p[2]/b",
+        ).text.strip()
+    except NoSuchElementException:
+        pv = None
+
+    try:
+        avg_liquid = driver.find_element(
+            By.XPATH,
+            "//div[@class='indicators__box'][.//p[normalize-space(text())='Liquidez Média Diária']]//p[2]/b",
+        ).text.strip()
+    except NoSuchElementException:
+        avg_liquid = None
 
     try:
         liquidity = parse_fundsexplorer_number(avg_liquid)
         if liquidity < offset:
+            print(
+                f"Skipping {ticker}: liquidity {liquidity} < {offset}"
+            )
             return
     except ValueError:
+        print(f"Failed to parse liquidity for {ticker}; skipping.")
         return
 
-    return {
-        "dy": dy,
-        "pv": pv,
-        "liquidity": liquidity
-    }
+    print(f"Successfully scraped {ticker} (liquidity={liquidity}).")
 
-def get_reit_metrics(driver, symbol, service, offset):
-    if service == "fundsexplorer":
-        return get_fundsexplorer_data(driver, symbol, offset)
+    return {"dy": dy, "pv": pv, "liquidity": liquidity}
 
-    raise ValueError(f"Unknown service: {service}")
+def get_reit_metrics(driver, ticker, service, offset):
+    time.sleep(random.uniform(1, 3))
+    
+    print(f"Processing {ticker} (service={service})...")
+    try:
+        if service == "fundsexplorer":
+            metrics = get_fundsexplorer_data(driver, ticker, offset)
+        else:
+            raise ValueError(f"Unknown service: {service}")
+
+        if not metrics:
+            print(f"No data for {ticker}.")
+
+        return metrics
+    except Exception:
+        print(f"Failed to scrape {ticker}.")
+        raise
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -345,7 +445,7 @@ if __name__ == "__main__":
         parser.error("You must specify at least one target: --stocks or --reits.")
 
     print("=" * 60)
-    print("Assets scrapping")
+    print("Assets scraping")
     print("=" * 60)
 
     if args.stocks:
