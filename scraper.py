@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -41,18 +42,41 @@ def initialize_driver():
 
     return driver, wait
 
-def download_stocks(driver, wait):
-    print("Downloading stocks data...")
+def rename_download(new_name, timeout=30):
+    download_dir = Path.cwd()
+
+    old_file = download_dir / "statusinvest-busca-avancada.csv"
+    new_file = download_dir / new_name
+
+    start = time.time()
+    while time.time() - start < timeout:
+        # Wait until Chrome finishes downloading
+        if old_file.exists() and not (download_dir / "statusinvest-busca-avancada.csv.crdownload").exists():
+            old_file.replace(new_file)
+            return
+
+        time.sleep(0.5)
+
+    raise TimeoutError("Download did not finish.")
+
+def download_assets(driver, wait, asset_type):
+    print(f"Downloading {asset_type} data...")
     
-    driver.get("https://statusinvest.com.br/acoes/busca-avancada")
+    if asset_type == "stocks":
+        driver.get("https://statusinvest.com.br/acoes/busca-avancada")
+    elif asset_type == "reits":
+        driver.get("https://statusinvest.com.br/fundos-imobiliarios/busca-avancada")
+    else:
+        raise ValueError(f"Unknown asset type: {asset_type}")
 
     # Close footer (if it appears)
-    close_footer = WebDriverWait(driver, 3).until(
-        EC.element_to_be_clickable(
-            (By.CSS_SELECTOR, "#footer-fixed > a")
+    try:
+        close_footer = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "#footer-fixed > a"))
         )
-    )
-    close_footer.click()
+        close_footer.click()
+    except TimeoutException:
+        pass
 
     # Close advertising (if it appears)
     close_button = wait.until(
@@ -82,7 +106,9 @@ def download_stocks(driver, wait):
         download_button
     )
 
-    print("Stocks data downloaded successfully.")
+    rename_download(f"{asset_type.lower()}.csv")
+
+    print(f"Assets downloaded successfully.")
 
 def parse_brazilian_number(value: str) -> float:
     """
@@ -99,12 +125,12 @@ def parse_brazilian_number(value: str) -> float:
              .replace(",", ".")
     )
 
-def filter_stocks(offset):
-    print("Filtering stocks data...")
+def filter_assets(offset, asset_type):
+    print(f"Filtering {asset_type} data...")
 
-    csv_file = Path(__file__).parent / "statusinvest-busca-avancada.csv"
+    csv_file = Path(__file__).parent / f"{asset_type}.csv"
 
-    stocks = []
+    assets = []
 
     with open(csv_file, encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f, delimiter=";")
@@ -117,11 +143,11 @@ def filter_stocks(offset):
             )
 
             if liquidity >= offset:
-                stocks.append(row["TICKER"])
+                assets.append(row["TICKER"])
 
-    print("Stocks data filtered successfully.")
+    print("Data filtered successfully.")
 
-    return stocks
+    return assets
 
 def get_statusinvest_metrics(driver, symbol):
     url = f"https://statusinvest.com.br/acoes/{symbol.lower()}"
@@ -169,8 +195,8 @@ def get_stock_metrics(driver, symbol, service):
     
     raise ValueError(f"Unknown service: {service}")
 
-def save_stock_metrics(ticker: str, metrics: dict):
-    file = Path("stocks.json")
+def save_metrics(ticker: str, metrics: dict, asset_type: str):
+    file = Path(f"{asset_type}.json")
 
     if file.exists():
         with file.open("r", encoding="utf-8") as f:
@@ -270,35 +296,21 @@ def get_reit_metrics(driver, symbol, service, offset):
 
     raise ValueError(f"Unknown service: {service}")
 
-def save_reit_metrics(ticker: str, metrics: dict):
-    file = Path("reits.json")
-
-    if file.exists():
-        with file.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-    else:
-        data = {}
-
-    data[ticker] = metrics
-
-    with file.open("w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Scrappe assets data."
+        description="Scrape assets data."
     )
 
     parser.add_argument(
         "--stocks",
         action="store_true",
-        help="Scrappe stocks data."
+        help="Scrape stocks data."
     )
 
     parser.add_argument(
         "--reits",
         action="store_true",
-        help="Scrappe REITs data."
+        help="Scrape REITs data."
     )
 
     parser.add_argument(
@@ -351,16 +363,22 @@ if __name__ == "__main__":
     driver, wait = initialize_driver()
 
     if args.stocks:
-        download_stocks(driver, wait)
-        
-        for ticker in filter_stocks(args.stocks_offset):
+        download_assets(driver, wait, "stocks")
+        for ticker in filter_assets(args.stocks_offset, "stocks"):
             metrics = get_stock_metrics(driver, ticker, args.stocks_service)
-            save_stock_metrics(ticker, metrics)
+            save_metrics(ticker, metrics, "stocks")
 
     if args.reits:
-        for ticker, data in get_reits(driver).items():
+        download_assets(driver, wait, "reits")
+
+        reits_data = get_reits(driver)
+
+        for ticker in filter_assets(args.reits_offset, "reits"):
             metrics = get_reit_metrics(driver, ticker, args.reits_service, args.reits_offset)
             if metrics is not None:
-                save_reit_metrics(ticker, {**data, **metrics})
+                save_metrics(ticker, {
+                    **reits_data.get(ticker, {}),
+                    **metrics
+                }, "reits")
 
     driver.quit()

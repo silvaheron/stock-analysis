@@ -43,5 +43,7 @@ Thumbs.db
 *.log
 
 # Downloaded files
-statusinvest-busca-avancada.csv
+stocks.csv
 stocks.json
+reits.csv
+reits.json
