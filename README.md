@@ -173,3 +173,48 @@ The analysis results are merged into the existing asset JSON files:
 - `reits.json`
 
 Existing asset data is preserved, and calculated metrics are added or updated.
+
+## Price Updates
+
+The price update script retrieves the latest asset prices from Yahoo Finance and updates the existing JSON files.
+
+At least one target (`--stocks` or `--reits`) must be specified.
+
+### Stocks
+
+Update stock prices:
+
+```bash
+python update_prices.py --stocks
+```
+
+### REITs
+
+Update REIT prices:
+
+```bash
+python update_prices.py --reits
+```
+
+### Multiple targets
+
+Update both stocks and REIT prices:
+
+```bash
+python update_prices.py --stocks --reits
+```
+
+## Output
+
+The script updates the existing asset files:
+
+- `stocks.json`
+- `reits.json`
+
+The current market price is added or updated in the `price` field for each asset.
+
+## Notes
+
+* Prices are retrieved from Yahoo Finance.
+* Brazilian assets are automatically converted to Yahoo Finance ticker format (`TICKER.SA`).
+* Data is fetched in batches to reduce the number of requests sent to Yahoo Finance.

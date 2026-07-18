@@ -1,10 +1,7 @@
 import argparse
-import json
 import math
 
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent
+from utils import load_assets, save_assets
 
 def get_available_analyses(target, args):
     analyses = []
@@ -148,32 +145,6 @@ def run_graham(asset):
     return {
         "graham": math.sqrt(22.5 * eps * bvps)
     }
-
-def load_assets(asset_type):
-    filename = f"{asset_type}.json"
-
-    path = Path(filename)
-
-    if not path.exists():
-        print(f"File not found: {filename}")
-        return {}
-
-    with path.open("r", encoding="utf-8") as file:
-        return json.load(file)
-
-def save_assets(asset_type, assets):
-    path = BASE_DIR / f"{asset_type}.json"
-    temp_path = BASE_DIR / f"{asset_type}.tmp"
-
-    with temp_path.open("w", encoding="utf-8") as file:
-        json.dump(
-            assets,
-            file,
-            ensure_ascii=False,
-            indent=4
-        )
-
-    temp_path.replace(path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
