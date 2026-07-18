@@ -18,9 +18,6 @@ def get_available_analyses(target, args):
         if args.lynch:
             analyses.append(run_lynch)
 
-        if args.greenblatt:
-            analyses.append(run_greenblatt)
-
         if args.graham:
             analyses.append(run_graham)
 
@@ -85,8 +82,54 @@ def run_lynch(asset):
         "lynch": lynch if lynch > 0 else None
     }
 
-def run_greenblatt(asset):
-    pass
+def run_greenblatt(assets):
+    eligible = [
+        (ticker, asset)
+        for ticker, asset in assets.items()
+        if parse_number(asset.get("ev_ebit")) is not None
+        and parse_percentage(asset.get("roic")) is not None
+    ]
+
+    if not eligible:
+        return
+
+    for _, asset in assets.items():
+        asset["ev_ebit_rank"] = None
+        asset["roic_rank"] = None
+        asset["greenblatt_score"] = None
+        asset["greenblatt_rank"] = None
+
+    # EV/EBIT lower is better
+    eligible.sort(
+        key=lambda x: parse_number(x[1].get("ev_ebit"))
+    )
+
+    for rank, (_, asset) in enumerate(eligible, start=1):
+        asset["ev_ebit_rank"] = rank
+
+    # ROIC higher is better
+    eligible.sort(
+        key=lambda x: parse_percentage(x[1].get("roic")),
+        reverse=True
+    )
+
+    for rank, (_, asset) in enumerate(eligible, start=1):
+        asset["roic_rank"] = rank
+
+    # Combined score
+    for _, asset in eligible:
+        asset["greenblatt_score"] = (
+            asset["ev_ebit_rank"] +
+            asset["roic_rank"]
+        )
+
+    # Final ranking
+    eligible.sort(
+        key=lambda x: x[1]["greenblatt_score"]
+    )
+
+    for rank, (_, asset) in enumerate(eligible, start=1):
+        asset["greenblatt_rank"] = rank
 
 def run_graham(asset):
     eps = parse_number(asset.get("eps"))
@@ -230,22 +273,6 @@ if __name__ == "__main__":
 
     print("=" * 60)
 
-    selected_analyses = []
-
-    if args.bazin:
-        selected_analyses.append(
-            lambda asset: run_bazin(asset, args.rate)
-        )
-
-    if args.lynch:
-        selected_analyses.append(run_lynch)
-
-    if args.greenblatt:
-        selected_analyses.append(run_greenblatt)
-
-    if args.graham:
-        selected_analyses.append(run_graham)
-
     targets = []
 
     if args.stocks:
@@ -261,10 +288,6 @@ if __name__ == "__main__":
 
         analyses = get_available_analyses(target, args)
 
-        if not analyses:
-            print(f"No compatible analyses for {target}.")
-            continue
-
         for ticker, asset in assets.items():
             result = {}
             
@@ -277,6 +300,9 @@ if __name__ == "__main__":
             print(f"Successfully processed {ticker}.")
 
             asset.update(result)
+
+        if args.greenblatt and target == "stocks":
+            run_greenblatt(assets)
 
         save_assets(target, assets)
 
