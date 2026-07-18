@@ -1,122 +1,205 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import {
+  AppBar,
+  Box,
+  Card,
+  CardActionArea,
+  CardContent,
+  Container,
+  Toolbar,
+  Typography,
+} from "@mui/material";
 
-function App() {
-  const [count, setCount] = useState(0)
+import {
+  PlayArrow,
+  Refresh,
+  Analytics,
+  TrendingUp,
+  Apartment,
+} from "@mui/icons-material";
 
+function ActionCard({
+  title,
+  description,
+  icon,
+  color,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  onClick: () => void;
+}) {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <Card
+      sx={{
+        width: 300,
+        textAlign: "center",
+      }}
+    >
+      <CardActionArea
+        sx={{
+          p: 4,
+          height: "100%",
+        }}
+        onClick={onClick}
+      >
+        <Box
+          sx={{
+            color,
+            mb: 2,
+          }}
         >
-          Count is {count}
-        </button>
-      </section>
+          {icon}
+        </Box>
 
-      <div className="ticks"></div>
+        <CardContent>
+          <Typography
+            variant="h5"
+            gutterBottom
+            sx={{ fontWeight: "bold" }}
+          >
+            {title}
+          </Typography>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <Typography color="text.secondary">
+            {description}
+          </Typography>
+        </CardContent>
+      </CardActionArea>
+    </Card>
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "#f5f5f5",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <AppBar position="static">
+        <Toolbar>
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: "bold" }}
+          >
+            AlphaLens
+          </Typography>
+
+          <Typography
+            variant="caption"
+            sx={{
+              ml: 1,
+              opacity: 0.7,
+            }}
+          >
+            v1.0
+          </Typography>
+        </Toolbar>
+      </AppBar>
+
+      <Container
+        maxWidth="lg"
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          alignItems: "center",
+          textAlign: "center",
+          py: 4,
+        }}
+      >
+        <Typography
+          variant="h3"
+          sx={{ fontWeight: "bold" }}
+          gutterBottom
+        >
+          Welcome
+        </Typography>
+
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          sx={{ mb: 3 }}
+        >
+          Select what you want to analyze
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 4,
+            justifyContent: "center",
+            alignItems: "stretch",
+            flexWrap: "wrap",
+          }}
+        >
+          <ActionCard
+            title="Stocks"
+            description="Analyze stocks metrics."
+            icon={<TrendingUp sx={{ fontSize: 70 }} />}
+            color="primary.main"
+            onClick={() => console.log("Stocks")}
+          />
+
+          <ActionCard
+            title="REITs"
+            description="Analyze REITs metrics."
+            icon={<Apartment sx={{ fontSize: 70 }} />}
+            color="success.main"
+            onClick={() => console.log("REITs")}
+          />
+        </Box>
+
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          sx={{ mt: 3, mb: 3 }}
+        >
+          Select which server task to run
+        </Typography>
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 4,
+            justifyContent: "center",
+            alignItems: "stretch",
+            flexWrap: "wrap",
+          }}
+        >
+          <ActionCard
+            title="Run scraping"
+            description="Scrape the latest data."
+            icon={<PlayArrow sx={{ fontSize: 70 }} />}
+            color="primary.main"
+            onClick={() => console.log("Run scraping")}
+          />
+
+          <ActionCard
+            title="Update prices"
+            description="Update current prices."
+            icon={<Refresh sx={{ fontSize: 70 }} />}
+            color="warning.main"
+            onClick={() => console.log("Update prices")}
+          />
+
+          <ActionCard
+            title="Run analysis"
+            description="Process metrics."
+            icon={<Analytics sx={{ fontSize: 70 }} />}
+            color="success.main"
+            onClick={() => console.log("Run analysis")}
+          />
+        </Box>
+      </Container>
+    </Box>
+  );
+}
+
+export default App;

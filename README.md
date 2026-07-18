@@ -218,3 +218,27 @@ The current market price is added or updated in the `price` field for each asset
 * Prices are retrieved from Yahoo Finance.
 * Brazilian assets are automatically converted to Yahoo Finance ticker format (`TICKER.SA`).
 * Data is fetched in batches to reduce the number of requests sent to Yahoo Finance.
+
+## Running the Frontend
+
+Install the dependencies (only required the first time):
+
+```bash
+npm install
+```
+
+Start the Vite development server:
+
+```bash
+npm run dev
+```
+
+The application will be available at:
+
+```
+http://localhost:5173
+```
+
+Vite supports Hot Module Replacement (HMR), so changes made to the source code are reflected automatically in the browser without restarting the server.
+
+To stop the development server, press `Ctrl + C` in the terminal.
