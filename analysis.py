@@ -5,6 +5,26 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
+def get_available_analyses(target, args):
+    analyses = []
+
+    if args.bazin:
+        analyses.append(
+            lambda asset: run_bazin(asset, args.rate)
+        )
+
+    if target == "stocks":
+        if args.lynch:
+            analyses.append(run_lynch)
+
+        if args.greenblatt:
+            analyses.append(run_greenblatt)
+
+        if args.graham:
+            analyses.append(run_graham)
+
+    return analyses
+
 def run_bazin(asset, rate):
     rate = rate / 100
 
@@ -19,8 +39,35 @@ def run_bazin(asset, rate):
         "bazin": div_avg / rate
     }
 
+def parse_percentage(value):
+    if value is None:
+        return 0
+
+    value = str(value).strip()
+    value = value.replace("%", "").replace(",", ".")
+
+    if value in ("", "-", "—", "N/A"):
+        return 0
+
+    return float(value) / 100
+
+
 def run_lynch(asset):
-    pass
+    pl_avg = asset.get("pl_avg")
+
+    if pl_avg is None or pl_avg <= 0:
+        return {
+            "lynch": None
+        }
+
+    cagr = parse_percentage(asset.get("cagr"))
+    dy_avg = asset.get("dy_avg") or 0
+
+    lynch = (cagr + dy_avg) / pl_avg
+
+    return {
+        "lynch": lynch if lynch > 0 else None
+    }
 
 def run_greenblatt(asset):
     pass
@@ -53,8 +100,6 @@ def save_assets(asset_type, assets):
         )
 
     temp_path.replace(path)
-
-    print(f"Saved {asset_type} data")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -183,11 +228,17 @@ if __name__ == "__main__":
 
         assets = load_assets(target)
 
+        analyses = get_available_analyses(target, args)
+
+        if not analyses:
+            print(f"No compatible analyses for {target}.")
+            continue
+
         for ticker, asset in assets.items():
             result = {}
             
             print(f"Processing {ticker}...")
-            for analysis in selected_analyses:
+            for analysis in analyses:
                 output = analysis(asset)
 
                 if output:
