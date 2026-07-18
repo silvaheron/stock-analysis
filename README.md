@@ -242,3 +242,59 @@ http://localhost:5173
 Vite supports Hot Module Replacement (HMR), so changes made to the source code are reflected automatically in the browser without restarting the server.
 
 To stop the development server, press `Ctrl + C` in the terminal.
+
+## Running the Backend
+
+The backend is responsible for running the Python services, such as scraping data, updating prices, and generating analysis results.
+
+### Install dependencies
+
+Create and activate your Python virtual environment (if not already created):
+
+```bash
+python -m venv venv
+```
+
+Activate it:
+
+**Windows**
+
+```bash
+venv\Scripts\activate
+```
+
+**Linux/macOS**
+
+```bash
+source venv/bin/activate
+```
+
+Install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Start the API server
+
+From the backend directory, run:
+
+```bash
+uvicorn api:app --reload
+```
+
+The API will be available at:
+
+```text
+http://localhost:8000
+```
+
+The `--reload` option automatically restarts the server when Python files are changed during development.
+
+### API documentation
+
+FastAPI automatically provides interactive documentation:
+
+```text
+http://localhost:8000/docs
+```

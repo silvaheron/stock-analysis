@@ -141,7 +141,7 @@ function App() {
         >
           <ActionCard
             title="Stocks"
-            description="Analyze stocks metrics."
+            description="Analyze stocks metrics"
             icon={<TrendingUp sx={{ fontSize: 70 }} />}
             color="primary.main"
             onClick={() => console.log("Stocks")}
@@ -149,7 +149,7 @@ function App() {
 
           <ActionCard
             title="REITs"
-            description="Analyze REITs metrics."
+            description="Analyze REITs metrics"
             icon={<Apartment sx={{ fontSize: 70 }} />}
             color="success.main"
             onClick={() => console.log("REITs")}
@@ -175,7 +175,7 @@ function App() {
         >
           <ActionCard
             title="Run scraping"
-            description="Scrape the latest data."
+            description="Scrape the latest data"
             icon={<PlayArrow sx={{ fontSize: 70 }} />}
             color="primary.main"
             onClick={() => console.log("Run scraping")}
@@ -183,7 +183,7 @@ function App() {
 
           <ActionCard
             title="Update prices"
-            description="Update current prices."
+            description="Update current prices"
             icon={<Refresh sx={{ fontSize: 70 }} />}
             color="warning.main"
             onClick={() => console.log("Update prices")}
@@ -191,7 +191,7 @@ function App() {
 
           <ActionCard
             title="Run analysis"
-            description="Process metrics."
+            description="Process metrics"
             icon={<Analytics sx={{ fontSize: 70 }} />}
             color="success.main"
             onClick={() => console.log("Run analysis")}
