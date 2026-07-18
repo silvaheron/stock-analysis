@@ -582,7 +582,7 @@ if __name__ == "__main__":
         parser.error("You must specify at least one target: --stocks or --reits.")
 
     print("=" * 60)
-    print("Assets scraping")
+    print("Scraping assets")
     print("=" * 60)
 
     if args.stocks:
@@ -620,3 +620,7 @@ if __name__ == "__main__":
                 }, "reits")
 
     driver.quit()
+
+    print("=" * 60)
+    print("Scraping completed")
+    print("=" * 60)
