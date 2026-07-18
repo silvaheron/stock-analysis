@@ -1,5 +1,6 @@
 import argparse
 import json
+import math
 
 from pathlib import Path
 
@@ -51,7 +52,22 @@ def parse_percentage(value):
 
     return float(value) / 100
 
+def parse_number(value):
+    if value is None:
+        return None
 
+    value = str(value).strip()
+
+    if value in ("", "-", "—", "N/A"):
+        return None
+
+    value = value.replace(",", ".")
+
+    try:
+        return float(value)
+    except ValueError:
+        return None
+    
 def run_lynch(asset):
     pl_avg = asset.get("pl_avg")
 
@@ -73,7 +89,22 @@ def run_greenblatt(asset):
     pass
 
 def run_graham(asset):
-    pass
+    eps = parse_number(asset.get("eps"))
+    bvps = parse_number(asset.get("bvps"))
+
+    if eps is None or bvps is None:
+        return {
+            "graham": None
+        }
+
+    if eps < 0 or bvps < 0:
+        return {
+            "graham": 0
+        }
+
+    return {
+        "graham": math.sqrt(22.5 * eps * bvps)
+    }
 
 def load_assets(asset_type):
     filename = f"{asset_type}.json"
