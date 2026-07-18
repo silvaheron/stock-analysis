@@ -461,7 +461,7 @@ def get_fundsexplorer_metrics(driver, ticker):
         "dy": dy,
         "pv": pv,
         "liquidity": liquidity
-    }
+    }, liquidity != 0.0
 
 def get_fundsexplorer_dividends_average(driver, ticker):
     container = driver.find_element(By.ID, "dividends-container")
@@ -518,10 +518,11 @@ def get_reit_metrics(driver, ticker, service):
     print(f"Processing {ticker} (service={service})...")
     try:
         if service == "fundsexplorer":
-            metrics = get_fundsexplorer_metrics(driver, ticker)
+            metrics, processed = get_fundsexplorer_metrics(driver, ticker)
             
-            time.sleep(1)
-            metrics.update(get_fundsexplorer_dividends_average(driver, ticker))
+            if processed:
+                time.sleep(1)
+                metrics.update(get_fundsexplorer_dividends_average(driver, ticker))
         else:
             raise ValueError(f"Unknown service: {service}")
 
