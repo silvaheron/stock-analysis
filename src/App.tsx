@@ -163,7 +163,6 @@ function App() {
             disabled={backendRunning}
             onClick={async () => {
               await axios.post("http://localhost:8000/scrape");
-              setStatusMessage("Starting scraping...");
             }}
           />
 
