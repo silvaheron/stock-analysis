@@ -412,7 +412,7 @@ def parse_fundsexplorer_number(value):
 
     return numeric * multiplier
 
-def get_fundsexplorer_data(driver, ticker, offset):
+def get_fundsexplorer_metrics(driver, ticker):
     driver.get(f"https://www.fundsexplorer.com.br/funds/{ticker}")
 
     try:
@@ -451,26 +451,77 @@ def get_fundsexplorer_data(driver, ticker, offset):
 
     try:
         liquidity = parse_fundsexplorer_number(avg_liquid)
-        if liquidity < offset:
-            print(
-                f"Skipping {ticker}: liquidity {liquidity} < {offset}"
-            )
-            return
     except ValueError:
         print(f"Failed to parse liquidity for {ticker}; skipping.")
         return
 
     print(f"Successfully processed {ticker}.")
 
-    return {"dy": dy, "pv": pv, "liquidity": liquidity}
+    return {
+        "dy": dy,
+        "pv": pv,
+        "liquidity": liquidity
+    }
 
-def get_reit_metrics(driver, ticker, service, offset):
+def get_fundsexplorer_dividends_average(driver, ticker):
+    container = driver.find_element(By.ID, "dividends-container")
+
+    nonce = container.get_attribute("data-nonce")
+
+    response = driver.execute_async_script("""
+        const [nonce, ticker, callback] = arguments;
+
+        const form = new FormData();
+        form.append("action", "funds-get-income");
+        form.append("fund", ticker);
+
+        fetch("https://www.fundsexplorer.com.br/wp-admin/admin-ajax.php", {
+            method: "POST",
+            headers: {
+                "X-CSRF-TOKEN": nonce,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: form
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("HTTP " + response.status);
+            }
+            return response.text();
+        })
+        .then(data => callback(data))
+        .catch(error => callback("ERROR: " + error.message));
+    """, nonce, ticker)
+
+    dividends = json.loads(response)["data"]
+
+    current_year = datetime.now().year
+
+    start_year = current_year - 5
+    end_year = current_year - 1
+
+    total = sum(
+        float(item["valor"])
+        for item in dividends
+        if start_year <= int(item["ano"]) <= end_year
+    )
+
+    average = total / 5
+
+    return {
+        "div_avg": average
+    }
+
+def get_reit_metrics(driver, ticker, service):
     time.sleep(random.uniform(1, 3))
     
     print(f"Processing {ticker} (service={service})...")
     try:
         if service == "fundsexplorer":
-            metrics = get_fundsexplorer_data(driver, ticker, offset)
+            metrics = get_fundsexplorer_metrics(driver, ticker)
+            
+            time.sleep(1)
+            metrics.update(get_fundsexplorer_dividends_average(driver, ticker))
         else:
             raise ValueError(f"Unknown service: {service}")
 
@@ -550,6 +601,7 @@ if __name__ == "__main__":
 
     if args.stocks:
         download_assets(driver, wait, "stocks")
+
         for ticker in filter_assets(args.stocks_offset, "stocks"):
             metrics = get_stock_metrics(driver, ticker, args.stocks_service)
             save_metrics(ticker, metrics, "stocks")
@@ -560,7 +612,7 @@ if __name__ == "__main__":
         reits_data = get_reits(driver)
 
         for ticker in filter_assets(args.reits_offset, "reits"):
-            metrics = get_reit_metrics(driver, ticker, args.reits_service, args.reits_offset)
+            metrics = get_reit_metrics(driver, ticker, args.reits_service)
             if metrics is not None:
                 save_metrics(ticker, {
                     **reits_data.get(ticker, {}),
