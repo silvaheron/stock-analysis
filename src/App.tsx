@@ -1,9 +1,10 @@
+import { useEffect, useState } from "react";
+
+import axios from "axios";
+
 import {
   AppBar,
   Box,
-  Card,
-  CardActionArea,
-  CardContent,
   Container,
   Toolbar,
   Typography,
@@ -15,63 +16,44 @@ import {
   Analytics,
   TrendingUp,
   Apartment,
+  Autorenew,
+  CheckCircle,
 } from "@mui/icons-material";
 
-function ActionCard({
-  title,
-  description,
-  icon,
-  color,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <Card
-      sx={{
-        width: 300,
-        textAlign: "center",
-      }}
-    >
-      <CardActionArea
-        sx={{
-          p: 4,
-          height: "100%",
-        }}
-        onClick={onClick}
-      >
-        <Box
-          sx={{
-            color,
-            mb: 2,
-          }}
-        >
-          {icon}
-        </Box>
-
-        <CardContent>
-          <Typography
-            variant="h5"
-            gutterBottom
-            sx={{ fontWeight: "bold" }}
-          >
-            {title}
-          </Typography>
-
-          <Typography color="text.secondary">
-            {description}
-          </Typography>
-        </CardContent>
-      </CardActionArea>
-    </Card>
-  );
-}
+import ActionCard from "./ActionCard"
 
 function App() {
+  const [backendRunning, setBackendRunning] = useState(false);
+  const [backendOperation, setBackendOperation] = useState<string | null>(null);
+  const [showStatus, setShowStatus] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await axios.get("http://localhost:8000/status");
+
+        if (data.running) {
+          setBackendRunning(true);
+          setBackendOperation(data.operation);
+          setShowStatus(true);
+        } else {
+          if (backendRunning) {
+            setBackendRunning(false);
+            setBackendOperation(null);
+
+            setTimeout(() => {
+              setShowStatus(false);
+            }, 5000);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [backendRunning]);
+
   return (
     <Box
       sx={{
@@ -178,7 +160,11 @@ function App() {
             description="Scrape the latest data"
             icon={<PlayArrow sx={{ fontSize: 70 }} />}
             color="primary.main"
-            onClick={() => console.log("Run scraping")}
+            disabled={backendRunning}
+            onClick={async () => {
+              await axios.post("http://localhost:8000/scrape");
+              setStatusMessage("Starting scraping...");
+            }}
           />
 
           <ActionCard
@@ -186,6 +172,7 @@ function App() {
             description="Update current prices"
             icon={<Refresh sx={{ fontSize: 70 }} />}
             color="warning.main"
+            disabled={backendRunning}
             onClick={() => console.log("Update prices")}
           />
 
@@ -194,10 +181,56 @@ function App() {
             description="Process metrics"
             icon={<Analytics sx={{ fontSize: 70 }} />}
             color="success.main"
+            disabled={backendRunning}
             onClick={() => console.log("Run analysis")}
           />
         </Box>
       </Container>
+      {showStatus && (
+        <Box
+          sx={{
+            position: "fixed",
+            bottom: 20,
+            right: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            px: 2,
+            py: 1.5,
+            borderRadius: 2,
+            bgcolor: "background.paper",
+            boxShadow: 4,
+            zIndex: 2000,
+          }}
+        >
+          {backendRunning ? (
+            <>
+              <Autorenew
+                sx={{
+                  color: "warning.main",
+                  animation: "spin 1s linear infinite",
+                  "@keyframes spin": {
+                    from: { transform: "rotate(0deg)" },
+                    to: { transform: "rotate(360deg)" },
+                  },
+                }}
+              />
+
+              <Typography color="warning.main">
+                Running {backendOperation}...
+              </Typography>
+            </>
+          ) : (
+            <>
+              <CheckCircle color="success" />
+
+              <Typography color="success.main">
+                Finished
+              </Typography>
+            </>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }
