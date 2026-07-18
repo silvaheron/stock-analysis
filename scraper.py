@@ -6,6 +6,7 @@ import re
 import time
 import requests
 
+from datetime import datetime
 from pathlib import Path
 
 from selenium import webdriver
@@ -263,6 +264,41 @@ def get_stock_metrics_averages(ticker: str) -> tuple:
     except:
         print(f"Failed parsing averages for {ticker}: Invalid JSON structure")
         return averages
+    
+def get_stock_dividends_average(ticker: str) -> float:
+    url = "https://statusinvest.com.br/acao/companytickerprovents"
+    params = {
+        "ticker": ticker,
+        "chartProventsType": "2"
+    }
+    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    response = requests.get(url, params=params, headers=headers)
+    if response.status_code != 200:
+        print(f"Failed fetching dividends for {ticker}: {response.status_code}")
+        return {}
+
+    data = response.json()
+    if data is None:
+        print(f"Failed fetching dividends for {ticker}: Data is None")
+        return {}
+
+    cur_year = datetime.now().year
+    dividend = {}
+    for row in data["assetEarningsModels"]:
+        try:
+            date = datetime.strptime(row["pd"], "%d/%m/%Y")
+        except ValueError:
+            continue
+        if date.year == cur_year or date.year < cur_year - 5:
+            continue
+        if date.year not in dividend:
+            dividend[date.year] = 0
+        dividend[date.year] += row["v"]
+
+    return {
+        "div_avg": sum(dividend.values()) / 5
+    }
 
 def get_stock_metrics(driver, ticker, service):
     time.sleep(random.uniform(1, 3))
@@ -274,7 +310,11 @@ def get_stock_metrics(driver, ticker, service):
         else:
             raise ValueError(f"Unknown service: {service}")
 
+        time.sleep(1)
         metrics.update(get_stock_metrics_averages(ticker))
+        
+        time.sleep(1)
+        metrics.update(get_stock_dividends_average(ticker))
 
         print(f"Successfully processed {ticker}.")
         return metrics
