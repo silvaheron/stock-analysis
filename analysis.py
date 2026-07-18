@@ -3,8 +3,21 @@ import json
 
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+
 def run_bazin(asset, rate):
-    pass
+    rate = rate / 100
+
+    div_avg = asset.get("div_avg")
+
+    if not div_avg or div_avg < 0:
+        return {
+            "bazin": None
+        }
+
+    return {
+        "bazin": div_avg / rate
+    }
 
 def run_lynch(asset):
     pass
@@ -28,8 +41,20 @@ def load_assets(asset_type):
         return json.load(file)
 
 def save_assets(asset_type, assets):
-    # TODO: implement JSON saving
-    pass
+    path = BASE_DIR / f"{asset_type}.json"
+    temp_path = BASE_DIR / f"{asset_type}.tmp"
+
+    with temp_path.open("w", encoding="utf-8") as file:
+        json.dump(
+            assets,
+            file,
+            ensure_ascii=False,
+            indent=4
+        )
+
+    temp_path.replace(path)
+
+    print(f"Saved {asset_type} data")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -160,12 +185,14 @@ if __name__ == "__main__":
 
         for ticker, asset in assets.items():
             result = {}
-
+            
+            print(f"Processing {ticker}...")
             for analysis in selected_analyses:
                 output = analysis(asset)
 
                 if output:
                     result.update(output)
+            print(f"Successfully processed {ticker}.")
 
             asset.update(result)
 
