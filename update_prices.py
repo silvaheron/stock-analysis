@@ -49,14 +49,7 @@ def update_prices(asset_type, assets):
         prices = fetch_prices(symbols)
 
         for ticker in batch:
-            yahoo_symbol = f"{ticker}.SA"
-
-            price = prices.get(yahoo_symbol)
-
-            if price is not None:
-                assets[ticker]["price"] = price
-            else:
-                print(f"  {ticker}: price not found")
+            assets[ticker]["price"] = prices.get(f"{ticker}.SA")
 
     return assets
 
