@@ -4,6 +4,8 @@ import json
 import random
 import re
 import time
+import requests
+
 from pathlib import Path
 
 from selenium import webdriver
@@ -221,20 +223,63 @@ def get_statusinvest_metrics(driver, symbol):
         "cagr": cagr,
     }
 
-def get_stock_metrics(driver, symbol, service):
+def get_stock_metrics_averages(ticker: str) -> tuple:
+    url = "https://statusinvest.com.br/acao/indicatorhistoricallist"
+
+    payload = {
+        "codes[]": ticker,
+        "time": "5",
+        "byQuarter": "false",
+        "futureData": "false"
+    }
+
+    headers = {
+        "User-Agent": "Mozilla/5.0",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    averages = {
+        "dy_avg": None,
+        "pl_avg": None,
+        "pv_avg": None,
+    }
+
+    response = requests.post(url, headers=headers, data=payload)
+    if response.status_code != 200:
+        print(f"Failed fetching averages for {ticker}: {response.status_code}")
+        return averages
+    
+    try:
+        for data in response.json()["data"].values():
+            dy_values = [entry.get("value") for entry in data[0]["ranks"][1:6] if entry.get("value") is not None]
+            pl_values = [entry.get("value") for entry in data[1]["ranks"][1:6] if entry.get("value") is not None]
+            pv_values = [entry.get("value") for entry in data[2]["ranks"][1:6] if entry.get("value") is not None]
+        
+        averages["dy_avg"] = sum(dy_values) / 5
+        averages["pl_avg"] = sum(pl_values) / 5
+        averages["pv_avg"] = sum(pv_values) / 5
+        
+        return averages
+    except:
+        print(f"Failed parsing averages for {ticker}: Invalid JSON structure")
+        return averages
+
+def get_stock_metrics(driver, ticker, service):
     time.sleep(random.uniform(1, 3))
 
-    print(f"Processing {symbol} (service={service})...")
+    print(f"Processing {ticker} (service={service})...")
     try:
         if service == "statusinvest":
-            metrics = get_statusinvest_metrics(driver, symbol)
+            metrics = get_statusinvest_metrics(driver, ticker)
         else:
             raise ValueError(f"Unknown service: {service}")
 
-        print(f"Successfully processed {symbol}.")
+        metrics.update(get_stock_metrics_averages(ticker))
+
+        print(f"Successfully processed {ticker}.")
         return metrics
     except Exception:
-        print(f"Failed to process {symbol}.")
+        print(f"Failed to process {ticker}.")
         raise
 
 def save_metrics(ticker: str, metrics: dict, asset_type: str):
