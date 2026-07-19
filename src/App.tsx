@@ -8,6 +8,7 @@ import {
   Container,
   Toolbar,
   Typography,
+  Button,
 } from "@mui/material";
 
 import {
@@ -233,6 +234,26 @@ function App() {
               <Typography color="warning.main">
                 Running {backendOperation}...
               </Typography>
+
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                onClick={async () => {
+                  try {
+                    await axios.post("http://localhost:8000/cancel");
+                    setBackendRunning(false);
+                    setBackendOperation(null);
+                    setTimeout(() => {
+                      setShowStatus(false);
+                    }, 5000);
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}
+              >
+                Cancel
+              </Button>
             </>
           ) : (
             <>

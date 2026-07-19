@@ -114,3 +114,31 @@ def get_status():
         "running": running,
         "operation": backend_operation if running else None
     }
+
+@app.post("/cancel")
+def cancel_operation():
+    global backend_process, backend_operation
+
+    if not is_backend_running():
+        raise HTTPException(
+            status_code=404,
+            detail="No operation is currently running."
+        )
+
+    operation = backend_operation
+
+    backend_process.terminate()
+
+    try:
+        backend_process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        backend_process.kill()
+        backend_process.wait()
+
+    backend_process = None
+    backend_operation = None
+
+    return {
+        "status": "cancelled",
+        "operation": operation
+    }
