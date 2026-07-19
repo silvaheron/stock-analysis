@@ -126,6 +126,7 @@ function App() {
             description="Analyze stocks metrics"
             icon={<TrendingUp sx={{ fontSize: 70 }} />}
             color="primary.main"
+            disabled={backendRunning}
             onClick={() => console.log("Stocks")}
           />
 
@@ -134,6 +135,7 @@ function App() {
             description="Analyze REITs metrics"
             icon={<Apartment sx={{ fontSize: 70 }} />}
             color="success.main"
+            disabled={backendRunning}
             onClick={() => console.log("REITs")}
           />
         </Box>
@@ -163,6 +165,9 @@ function App() {
             disabled={backendRunning}
             onClick={async () => {
               await axios.post("http://localhost:8000/scrape");
+              setBackendRunning(true);
+              setBackendOperation("scraper");
+              setShowStatus(true);
             }}
           />
 
@@ -172,7 +177,12 @@ function App() {
             icon={<Refresh sx={{ fontSize: 70 }} />}
             color="warning.main"
             disabled={backendRunning}
-            onClick={() => console.log("Update prices")}
+            onClick={async () => {
+              await axios.post("http://localhost:8000/update_prices");
+              setBackendRunning(true);
+              setBackendOperation("update prices");
+              setShowStatus(true);
+            }}
           />
 
           <ActionCard
@@ -181,7 +191,12 @@ function App() {
             icon={<Analytics sx={{ fontSize: 70 }} />}
             color="success.main"
             disabled={backendRunning}
-            onClick={() => console.log("Run analysis")}
+            onClick={async () => {
+              await axios.post("http://localhost:8000/analysis");
+              setBackendRunning(true);
+              setBackendOperation("analysis");
+              setShowStatus(true);
+            }}
           />
         </Box>
       </Container>
