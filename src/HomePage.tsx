@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import axios from "axios";
 
 import {
-  AppBar,
   Box,
   Container,
-  Toolbar,
   Typography,
   Button,
 } from "@mui/material";
@@ -23,7 +22,9 @@ import {
 
 import ActionCard from "./ActionCard"
 
-function App() {
+export default function HomePage() {
+  const navigate = useNavigate();
+
   const [backendRunning, setBackendRunning] = useState(false);
   const [backendOperation, setBackendOperation] = useState<string | null>(null);
   const [showStatus, setShowStatus] = useState(false);
@@ -56,35 +57,7 @@ function App() {
   }, [backendRunning]);
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "#f5f5f5",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <AppBar position="static">
-        <Toolbar>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: "bold" }}
-          >
-            AlphaLens
-          </Typography>
-
-          <Typography
-            variant="caption"
-            sx={{
-              ml: 1,
-              opacity: 0.7,
-            }}
-          >
-            v1.0
-          </Typography>
-        </Toolbar>
-      </AppBar>
-
+    <Box>
       <Container
         maxWidth="lg"
         sx={{
@@ -128,7 +101,7 @@ function App() {
             icon={<TrendingUp sx={{ fontSize: 70 }} />}
             color="primary.main"
             disabled={backendRunning}
-            onClick={() => console.log("Stocks")}
+            onClick={() => navigate("/stocks")}
           />
 
           <ActionCard
@@ -137,7 +110,7 @@ function App() {
             icon={<Apartment sx={{ fontSize: 70 }} />}
             color="success.main"
             disabled={backendRunning}
-            onClick={() => console.log("REITs")}
+            onClick={() => navigate("/reits")}
           />
         </Box>
 
@@ -269,5 +242,3 @@ function App() {
     </Box>
   );
 }
-
-export default App;
