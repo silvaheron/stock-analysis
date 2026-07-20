@@ -4,6 +4,8 @@ import subprocess
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from utils import load_assets
+
 app = FastAPI()
 
 app.add_middleware(
@@ -105,6 +107,18 @@ def run_analysis():
         "status": "started",
         "operation": backend_operation
     }
+
+@app.get("/stocks")
+def get_stocks():
+    assets = load_assets("stocks")
+
+    return [
+        {
+            "ticker": ticker,
+            **data
+        }
+        for ticker, data in assets.items()
+    ]
 
 @app.get("/status")
 def get_status():
