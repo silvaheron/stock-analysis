@@ -10,11 +10,7 @@ import type {
 
 import {
   Box,
-  Card,
-  CardActionArea,
-  CardContent,
   CircularProgress,
-  Typography,
 } from "@mui/material";
 
 import {
@@ -25,73 +21,17 @@ import {
   CompareArrows,
 } from "@mui/icons-material";
 
+import {
+  parseNumber,
+  formatNumber,
+  formatPercent,
+  formatCurrency,
+} from "./utils"
+
+import ActionCard from "./ActionCard"
 import CustomToolbar from "./CustomToolbar"
 
 import axios from "axios";
-
-const parseNumber = (value: unknown): number | null => {
-  if (
-    value === null ||
-    value === undefined ||
-    value === "" ||
-    value === "-" ||
-    value === "-%"
-  ) {
-    return null;
-  }
-
-  if (typeof value === "number") {
-    return value;
-  }
-
-  const normalized = value
-    .toString()
-    .replace(/\./g, "")
-    .replace(",", ".")
-    .replace("%", "")
-    .trim();
-
-  const number = Number(normalized);
-
-  return isNaN(number) ? null : number;
-};
-
-const formatNumber = (value: unknown) => {
-  const number = parseNumber(value);
-
-  return number === null
-    ? "-"
-    : number.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
-};
-
-const formatPercent = (value: unknown) => {
-  const number = parseNumber(value);
-
-  return number === null
-    ? "-"
-    : `${number.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}%`;
-};
-
-const formatCurrency = (value: unknown) => {
-  const number = parseNumber(value);
-
-  if (number === null) {
-    return "-";
-  }
-
-  return number.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
 
 const columns: GridColDef[] = [
   {
@@ -126,7 +66,7 @@ const columns: GridColDef[] = [
   },
   {
     field: "dy_avg",
-    headerName: "DY Average",
+    headerName: "DY Avg",
     type: "number",
     flex: 1,
     valueFormatter: formatPercent,
@@ -156,7 +96,7 @@ const columns: GridColDef[] = [
   },
   {
     field: "pl_avg",
-    headerName: "P/L Average",
+    headerName: "P/L Avg",
     type: "number",
     flex: 1,
     valueFormatter: formatNumber,
@@ -170,7 +110,7 @@ const columns: GridColDef[] = [
   },
   {
     field: "pv_avg",
-    headerName: "P/VP Average",
+    headerName: "P/VP Avg",
     type: "number",
     flex: 1,
     valueFormatter: formatNumber,
@@ -236,60 +176,6 @@ const hiddenColumns = {
   segment: false,
 };
 
-interface ActionCardProps {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  color?: string;
-  onClick: () => void;
-}
-
-function ActionCard({
-  title,
-  description,
-  icon,
-  color = "primary.main",
-  onClick,
-}: ActionCardProps) {
-  return (
-    <Card>
-      <CardActionArea onClick={onClick}>
-        <CardContent>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              mb: 1,
-            }}
-          >
-            <Box
-              sx={{
-                color,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {icon}
-            </Box>
-
-            <Typography variant="h6">
-              {title}
-            </Typography>
-          </Box>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-          >
-            {description}
-          </Typography>
-        </CardContent>
-      </CardActionArea>
-    </Card>
-  );
-}
-
 export default function StocksPage() {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -339,6 +225,8 @@ export default function StocksPage() {
         }}
       >
         <ActionCard
+          variant="horizontal"
+          width="100%"
           title="Bazin"
           description="Stocks below ceiling price"
           icon={<Savings fontSize="small" />}
@@ -347,6 +235,8 @@ export default function StocksPage() {
         />
 
         <ActionCard
+          variant="horizontal"
+          width="100%"
           title="Graham"
           description="Stocks below fair price"
           icon={<LocalOffer fontSize="small" />}
@@ -355,6 +245,8 @@ export default function StocksPage() {
         />
 
         <ActionCard
+          variant="horizontal"
+          width="100%"
           title="Lynch"
           description="Best growing stocks"
           icon={<TrendingUp fontSize="small" />}
@@ -363,6 +255,8 @@ export default function StocksPage() {
         />
 
         <ActionCard
+          variant="horizontal"
+          width="100%"
           title="Greenblatt"
           description="Best ranked stocks"
           icon={<Leaderboard fontSize="small" />}
@@ -371,6 +265,8 @@ export default function StocksPage() {
         />
 
         <ActionCard
+          variant="horizontal"
+          width="100%"
           title="Best Averages"
           description="Stocks below averages"
           icon={<CompareArrows fontSize="small" />}

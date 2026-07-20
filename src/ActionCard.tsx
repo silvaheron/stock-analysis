@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import {
   Box,
   Card,
@@ -6,28 +7,40 @@ import {
   Typography,
 } from "@mui/material";
 
-type ActionCardProps = {
+interface ActionCardProps {
   title: string;
   description: string;
-  icon: React.ReactNode;
-  color: string;
+  icon: ReactNode;
   onClick: () => void;
+
+  color?: string;
   disabled?: boolean;
-};
+
+  variant?: "vertical" | "horizontal";
+
+  width?: number | string;
+}
 
 export default function ActionCard({
   title,
   description,
   icon,
-  color,
   onClick,
+  color = "primary.main",
   disabled = false,
+  variant = "vertical",
+  width = 300,
 }: ActionCardProps) {
   return (
     <Card
+      elevation={0}
       sx={{
-        width: 300,
-        textAlign: "center",
+        width,
+        border: 1,
+        borderColor: "divider",
+        borderRadius: 1,
+        boxShadow: "none",
+        textAlign: variant === "vertical" ? "center" : "left",
         opacity: disabled ? 0.6 : 1,
       }}
     >
@@ -35,31 +48,69 @@ export default function ActionCard({
         disabled={disabled}
         onClick={onClick}
         sx={{
-          p: 4,
+          p: variant === "vertical" ? 4 : 2,
           height: "100%",
         }}
       >
-        <Box
-          sx={{
-            color,
-            mb: 2,
-          }}
-        >
-          {icon}
-        </Box>
+        <CardContent sx={{ p: 0 }}>
+          {variant === "vertical" ? (
+            <>
+              <Box
+                sx={{
+                  color,
+                  mb: 2,
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                {icon}
+              </Box>
 
-        <CardContent>
-          <Typography
-            variant="h5"
-            gutterBottom
-            sx={{ fontWeight: "bold" }}
-          >
-            {title}
-          </Typography>
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                gutterBottom
+              >
+                {title}
+              </Typography>
 
-          <Typography color="text.secondary">
-            {description}
-          </Typography>
+              <Typography color="text.secondary">
+                {description}
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  mb: 1,
+                }}
+              >
+                <Box
+                  sx={{
+                    color,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  {icon}
+                </Box>
+
+                <Typography variant="h6" fontWeight="bold">
+                  {title}
+                </Typography>
+              </Box>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                {description}
+              </Typography>
+            </>
+          )}
         </CardContent>
       </CardActionArea>
     </Card>

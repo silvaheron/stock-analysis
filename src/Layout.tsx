@@ -3,7 +3,7 @@ import { Outlet } from "react-router-dom";
 
 export default function Layout() {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "#f5f5f5" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "#eaeaea" }}>
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" sx={{ fontWeight: "bold" }}>
