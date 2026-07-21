@@ -12,13 +12,11 @@ interface ActionCardProps {
   description: string;
   icon: ReactNode;
   onClick: () => void;
-
   color?: string;
   disabled?: boolean;
-
   variant?: "vertical" | "horizontal";
-
   width?: number | string;
+  selected?: boolean;
 }
 
 export default function ActionCard({
@@ -30,18 +28,17 @@ export default function ActionCard({
   disabled = false,
   variant = "vertical",
   width = 300,
+  selected = false
 }: ActionCardProps) {
   return (
     <Card
       elevation={0}
       sx={{
         width,
-        border: 1,
-        borderColor: "divider",
-        borderRadius: 1,
-        boxShadow: "none",
-        textAlign: variant === "vertical" ? "center" : "left",
-        opacity: disabled ? 0.6 : 1,
+        border: "1px solid",
+        borderColor: selected ? "primary.main" : "divider",
+        bgcolor: selected ? "action.selected" : "background.paper",
+        transition: "all .2s",
       }}
     >
       <CardActionArea

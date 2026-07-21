@@ -1,11 +1,8 @@
-import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { DataGrid } from "@mui/x-data-grid";
 
 import type {
   GridColDef,
-  GridFilterModel,
-  GridSortModel
 } from "@mui/x-data-grid";
 
 import {
@@ -33,6 +30,52 @@ import CustomToolbar from "./CustomToolbar"
 
 import axios from "axios";
 
+const WEIGHTS = {
+  pl: 2,
+  pv: 1,
+};
+
+const getBelowAverageScore = (stock: any) => {
+  const pl = parseNumber(stock.pl);
+  const pv = parseNumber(stock.pv);
+  
+  if (
+    pl == null ||
+    pv == null ||
+    stock.pl_avg == null ||
+    stock.pv_avg == null
+  ) {
+    return null;
+  }
+
+  // Ignore companies with negative or zero current/historical P/L
+  if (pl <= 0 || stock.pl_avg <= 0) {
+    return null;
+  }
+
+  let score = 0;
+
+  // Lower P/L than 5Y average
+  if (pl < stock.pl_avg) {
+    score +=
+      WEIGHTS.pl *
+      ((stock.pl_avg - pl) / stock.pl_avg);
+  }
+
+  // Lower P/VP than 5Y average
+  if (
+    pv > 0 &&
+    stock.pv_avg > 0 &&
+    pv < stock.pv_avg
+  ) {
+    score +=
+      WEIGHTS.pv *
+      ((stock.pv_avg - pv) / stock.pv_avg);
+  }
+
+  return score;
+};
+
 const columns: GridColDef[] = [
   {
     field: "ticker",
@@ -58,20 +101,6 @@ const columns: GridColDef[] = [
 
   // Percentages
   {
-    field: "dy",
-    headerName: "DY",
-    type: "number",
-    flex: 1,
-    valueFormatter: formatPercent,
-  },
-  {
-    field: "dy_avg",
-    headerName: "DY Avg",
-    type: "number",
-    flex: 1,
-    valueFormatter: formatPercent,
-  },
-  {
     field: "roe",
     headerName: "ROE",
     type: "number",
@@ -81,6 +110,20 @@ const columns: GridColDef[] = [
   {
     field: "roa",
     headerName: "ROA",
+    type: "number",
+    flex: 1,
+    valueFormatter: formatPercent,
+  },
+  {
+    field: "dy",
+    headerName: "DY",
+    type: "number",
+    flex: 1,
+    valueFormatter: formatPercent,
+  },
+  {
+    field: "dy_avg",
+    headerName: "DY Avg",
     type: "number",
     flex: 1,
     valueFormatter: formatPercent,
@@ -176,20 +219,92 @@ const hiddenColumns = {
   segment: false,
 };
 
+type FilterMode =
+  | "all"
+  | "bazin"
+  | "graham"
+  | "lynch"
+  | "greenblatt"
+  | "averages";
+
 export default function StocksPage() {
-  const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [rows, setRows] = useState<any[]>([]);
+  const [filter, setFilter] = useState<FilterMode>("all");
 
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({
-    items: [],
-  });
+  const toggleFilter = (newFilter: FilterMode) => {
+    setFilter((current) =>
+      current === newFilter ? "all" : newFilter
+    );
+  };
 
-  const [sortModel, setSortModel] = useState<GridSortModel>([]);
+  const displayedRows = useMemo(() => {
+    switch (filter) {
+      case "bazin":
+        return rows
+          .filter(
+            (stock) =>
+              stock.price != null &&
+              stock.bazin != null &&
+              stock.price < stock.bazin
+          )
+          .sort((a, b) => {
+            const diffA = a.bazin - a.price;
+            const diffB = b.bazin - b.price;
+            return diffB - diffA;
+          });
+
+      case "graham":
+        return rows
+          .filter(
+            (stock) =>
+              stock.price != null &&
+              stock.graham != null &&
+              stock.price < stock.graham
+          )
+          .sort((a, b) => {
+            const upsideA = (a.graham / a.price) - 1;
+            const upsideB = (b.graham / b.price) - 1;
+            return upsideB - upsideA;
+          });
+
+      case "lynch":
+        return rows
+          .filter(
+            (stock) =>
+              stock.lynch != null &&
+              stock.lynch > 1
+          )
+          .sort((a, b) => b.lynch - a.lynch);
+
+      case "greenblatt":
+        return rows
+          .filter(
+            (stock) =>
+              stock.greenblatt_rank != null
+          )
+          .sort((a, b) => a.greenblatt_rank - b.greenblatt_rank);
+
+      case "averages":
+        return rows
+          .map((stock) => ({
+            stock,
+            score: getBelowAverageScore(stock),
+          }))
+          .filter(({ score }) => score != null && score > 0)
+          .sort((a, b) => b.score! - a.score!)
+          .map(({ stock }) => stock);
+      
+      default:
+        return rows;
+    }
+  }, [rows, filter]);
 
   useEffect(() => {
     axios
       .get("http://localhost:8000/stocks")
-      .then(({ data }) => setStocks(data))
+      .then(({ data }) => setRows(data))
       .finally(() => setLoading(false));
   }, []);
 
@@ -231,7 +346,8 @@ export default function StocksPage() {
           description="Stocks below ceiling price"
           icon={<Savings fontSize="small" />}
           color="success.main"
-          onClick={() => {}}
+          selected={filter === "bazin"}
+          onClick={() => toggleFilter("bazin")}
         />
 
         <ActionCard
@@ -241,7 +357,8 @@ export default function StocksPage() {
           description="Stocks below fair price"
           icon={<LocalOffer fontSize="small" />}
           color="warning.main"
-          onClick={() => {}}
+          selected={filter === "graham"}
+          onClick={() => toggleFilter("graham")}
         />
 
         <ActionCard
@@ -251,7 +368,8 @@ export default function StocksPage() {
           description="Best growing stocks"
           icon={<TrendingUp fontSize="small" />}
           color="info.main"
-          onClick={() => {}}
+          selected={filter === "lynch"}
+          onClick={() => toggleFilter("lynch")}
         />
 
         <ActionCard
@@ -260,8 +378,8 @@ export default function StocksPage() {
           title="Greenblatt"
           description="Best ranked stocks"
           icon={<Leaderboard fontSize="small" />}
-          color="primary.main"
-          onClick={() => {}}
+          selected={filter === "greenblatt"}
+          onClick={() => toggleFilter("greenblatt")}
         />
 
         <ActionCard
@@ -271,23 +389,20 @@ export default function StocksPage() {
           description="Stocks below averages"
           icon={<CompareArrows fontSize="small" />}
           color="error.main"
-          onClick={() => {}}
+          selected={filter === "averages"}
+          onClick={() => toggleFilter("averages")}
         />
       </Box>
 
       <Box sx={{ height: "calc(100% - 110px)" }}>
         <DataGrid
-          rows={stocks}
+          rows={displayedRows}
           columns={columns}
           initialState={{
             columns: {
               columnVisibilityModel: hiddenColumns,
             },
           }}
-          filterModel={filterModel}
-          onFilterModelChange={setFilterModel}
-          sortModel={sortModel}
-          onSortModelChange={setSortModel}
           getRowId={(row) => row.ticker}
           showToolbar
           slots={{
