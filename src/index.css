@@ -5,4 +5,13 @@ body,
   padding: 0;
   width: 100%;
   height: 100%;
+  font-family: "Roboto","Helvetica","Arial",sans-serif;
+}
+
+.MuiDataGrid-filterForm > div:first-child {
+  margin-left: .5rem;
+}
+
+.MuiDataGrid-filterForm > div:nth-child(2) {
+  display: none;
 }

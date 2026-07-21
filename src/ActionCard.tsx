@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import {
   Box,
   Card,
@@ -37,8 +37,10 @@ export default function ActionCard({
         width,
         border: "1px solid",
         borderColor: selected ? "primary.main" : "divider",
-        bgcolor: selected ? "action.selected" : "background.paper",
-        transition: "all .2s",
+        bgcolor: selected ? "primary.main" : "background.paper",
+        color: selected ? "primary.contrastText" : "text.primary",
+        opacity: disabled ? 0.5 : 1,
+        pointerEvents: disabled ? "none" : "auto",
       }}
     >
       <CardActionArea
@@ -65,7 +67,6 @@ export default function ActionCard({
 
               <Typography
                 variant="h5"
-                fontWeight="bold"
                 gutterBottom
               >
                 {title}
@@ -87,7 +88,7 @@ export default function ActionCard({
               >
                 <Box
                   sx={{
-                    color,
+                    color: selected ? "inherit" : color,
                     display: "flex",
                     alignItems: "center",
                   }}
@@ -95,7 +96,7 @@ export default function ActionCard({
                   {icon}
                 </Box>
 
-                <Typography variant="h6" fontWeight="bold">
+                <Typography variant="h6">
                   {title}
                 </Typography>
               </Box>
