@@ -95,7 +95,7 @@ const columns: GridColDef[] = [
     ),
   },
 
-  { field: "sector", headerName: "Sector", flex: 2 },
+  { field: "sector", headerName: "Sector", flex: 1 },
   { field: "sector_sub", headerName: "Sub sector", flex: 1 },
   { field: "segment", headerName: "Segment", flex: 1 },
 
@@ -175,6 +175,13 @@ const columns: GridColDef[] = [
     valueFormatter: formatCurrency,
   },
   {
+    field: "bazin_upside",
+    headerName: "Upside",
+    type: "number",
+    flex: 1,
+    valueFormatter: formatPercent,
+  },
+  {
     field: "graham",
     headerName: "Graham",
     type: "number",
@@ -186,11 +193,6 @@ const columns: GridColDef[] = [
     headerName: "Upside",
     type: "number",
     flex: 1,
-    valueGetter: (_, row) => {
-      if (!row.price || !row.graham) return null;
-
-      return ((row.graham / row.price) - 1) * 100;
-    },
     valueFormatter: formatPercent,
   },
   {
@@ -215,6 +217,7 @@ const columns: GridColDef[] = [
 ];
 
 const hiddenColumns = {
+  sector: false,
   sector_sub: false,
   segment: false,
 };
@@ -245,29 +248,19 @@ export default function StocksPage() {
         return rows
           .filter(
             (stock) =>
-              stock.price != null &&
-              stock.bazin != null &&
-              stock.price < stock.bazin
+              stock.bazin_upside != null &&
+              stock.bazin_upside > 0
           )
-          .sort((a, b) => {
-            const diffA = a.bazin - a.price;
-            const diffB = b.bazin - b.price;
-            return diffB - diffA;
-          });
+          .sort((a, b) => b.bazin_upside - a.bazin_upside);
 
       case "graham":
         return rows
           .filter(
             (stock) =>
-              stock.price != null &&
-              stock.graham != null &&
-              stock.price < stock.graham
+              stock.graham_upside != null &&
+              stock.graham_upside > 0
           )
-          .sort((a, b) => {
-            const upsideA = (a.graham / a.price) - 1;
-            const upsideB = (b.graham / b.price) - 1;
-            return upsideB - upsideA;
-          });
+          .sort((a, b) => b.graham_upside - a.graham_upside);
 
       case "lynch":
         return rows
@@ -304,7 +297,21 @@ export default function StocksPage() {
   useEffect(() => {
     axios
       .get("http://localhost:8000/stocks")
-      .then(({ data }) => setRows(data))
+      .then(({ data }) => {
+        const processedRows = data.map((stock: any) => ({
+          ...stock,
+          bazin_upside:
+            stock.price != null && stock.bazin != null && stock.price > 0
+              ? ((stock.bazin / stock.price) - 1) * 100
+              : null,
+          graham_upside:
+            stock.price != null && stock.graham != null && stock.price > 0
+              ? ((stock.graham / stock.price) - 1) * 100
+              : null,
+        }));
+        console.log(processedRows[0]);
+        setRows(processedRows);
+      })
       .finally(() => setLoading(false));
   }, []);
 

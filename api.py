@@ -120,6 +120,18 @@ def get_stocks():
         for ticker, data in assets.items()
     ]
 
+@app.get("/reits")
+def get_reits():
+    assets = load_assets("reits")
+
+    return [
+        {
+            "ticker": ticker,
+            **data
+        }
+        for ticker, data in assets.items()
+    ]
+
 @app.get("/status")
 def get_status():
     running = is_backend_running()
